@@ -5,38 +5,83 @@
 </head>
 <body>
     <h1>Chat home page</h1>
-    <p>You are logged in as: <a href="{% url 'accounts:profile' %}">{{ user.username }}</a></p>
-    <p>Chat log</p>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
-    <input id="msg-input" type="text" size="100"><br>
-    <input id="msg-submit" type="button" value="Send">
+    <p>You are logged in as: <a href="{% url 'accounts:profile' %}" id="username">{{ user.username }}</a></p>
+    <div id="chat" style="display: none;">
+        <p>Chat log with</p>
+        <textarea id="chat-log" cols="100" rows="20"></textarea><br>
+        <input id="msg-input" type="text" size="100"><br>
+        <input id="msg-submit" type="button" value="Send">
+    </div>
+    <div>
+        <h2>List of friends:</h2>
+        <ul>
+        {% for friend in friends %}
+            <li><button class="friend">{{ friend.username }}</button></li>
+        {% endfor %}
+        </ul>
+    </div>
     <script>
-        var chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/');
+        const username = document.querySelector('#username').textContent;
+        var sockets = {}
 
-        chatSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            document.querySelector('#chat-log').value += (data.message + '\n');
-        };
-
-        chatSocket.onclose = function(e) {
-            console.error('WS closed');
-        };
-
-        document.querySelector('#msg-input').focus();
-
-        document.querySelector('#msg-input').onkeyup = function(e) {
-            if (e.keyCode === 13) {
-                document.querySelector('#msg-submit').click();
+        function handleSocket(url) {
+            if (url in sockets) {
+                console.log('already in sockets');
+                var chatSocket = sockets[url];
             }
-        };
+            else {
+                sockets[url] = new WebSocket(url);
+                var chatSocket = sockets[url];
+                console.log('Added new socket '+ chatSocket)
+            }
+            chatSocket.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    document.querySelector('#chat-log').value += (data.message + '\n');
+                };
 
-        document.querySelector('#msg-submit').onclick = function(e) {
-            const msgDom = document.querySelector('#msg-input');
-            const msg = msgDom.value;
-            chatSocket.send(JSON.stringify({
-                'message': msg
-            }));
-            msgDom.value = '';
-        };
+            chatSocket.onclose = function(e) {
+                delete sockets[url];
+                console.error('WS closed');
+            };
+
+
+            document.querySelector('#msg-input').onkeyup = function(e) {
+                if (e.keyCode === 13) {
+                    document.querySelector('#msg-submit').click();
+                }
+            };
+
+            document.querySelector('#msg-submit').onclick = function(e) {
+                const msgDom = document.querySelector('#msg-input');
+                const msg = msgDom.value;
+                chatSocket.send(JSON.stringify({
+                    'message': msg
+                }));
+                msgDom.value = '';
+            };
+        }
+
+        function getChatUrl(friend) {
+            var url = 'ws://' + window.location.host + '/ws/chat/';
+            if (username < friend) {
+                url += username + '-' + friend + '/';
+            }
+            else {
+                url += friend + '-' + username + '/';
+            }
+            return url;
+        }
+
+        var friends = document.querySelectorAll(".friend");
+        for (var i = 0; i < friends.length; i++) {
+            friend = friends[i];
+            friend.onclick = function(e) {
+                const chat = document.getElementById('chat');
+                chat.childNodes[1].textContent = 'Chat log with ' + this.textContent;
+                chat.style.display = "block";
+                document.querySelector('#msg-input').focus();
+                handleSocket(getChatUrl(this.textContent));
+        }
+    }
     </script>
 </body>
