@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .models import ChatMessage
 
-# Register your models here.
-# random change
+
+admin.site.register(ChatMessage)

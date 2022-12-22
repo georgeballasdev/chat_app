@@ -24,7 +24,7 @@
         const username = document.querySelector('#username').textContent;
         var sockets = {}
 
-        function handleSocket(url) {
+        function handleSocket(url, friend) {
             if (url in sockets) {
                 console.log('already in sockets');
                 var chatSocket = sockets[url];
@@ -36,7 +36,7 @@
             }
             chatSocket.onmessage = function(e) {
                     const data = JSON.parse(e.data);
-                    document.querySelector('#chat-log').value += (data.sender + ': ' + data.message + '\n');
+                    document.querySelector('#chat-log').value += (data.sender + ': ' + data.message +  data.sent_at + '\n');
                 };
 
             chatSocket.onclose = function(e) {
@@ -55,8 +55,9 @@
                 const msgDom = document.querySelector('#msg-input');
                 const msg = msgDom.value;
                 chatSocket.send(JSON.stringify({
+                    'sender': username,
+                    'receiver': friend,
                     'message': msg,
-                    'sender': username
                 }));
                 msgDom.value = '';
             };
@@ -76,7 +77,7 @@
                 chat.childNodes[1].textContent = 'Chat log with ' + this.textContent;
                 chat.style.display = "block";
                 document.querySelector('#msg-input').focus();
-                handleSocket(getChatUrl(this.textContent));
+                handleSocket(getChatUrl(this.textContent), this.textContent);
         }
     }
     </script>
