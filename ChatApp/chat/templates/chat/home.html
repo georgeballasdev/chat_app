@@ -36,7 +36,7 @@
             }
             chatSocket.onmessage = function(e) {
                     const data = JSON.parse(e.data);
-                    document.querySelector('#chat-log').value += (data.message + '\n');
+                    document.querySelector('#chat-log').value += (data.sender + ': ' + data.message + '\n');
                 };
 
             chatSocket.onclose = function(e) {
@@ -55,20 +55,16 @@
                 const msgDom = document.querySelector('#msg-input');
                 const msg = msgDom.value;
                 chatSocket.send(JSON.stringify({
-                    'message': msg
+                    'message': msg,
+                    'sender': username
                 }));
                 msgDom.value = '';
             };
         }
 
         function getChatUrl(friend) {
-            var url = 'ws://' + window.location.host + '/ws/chat/';
-            if (username < friend) {
-                url += username + '-' + friend + '/';
-            }
-            else {
-                url += friend + '-' + username + '/';
-            }
+            var url = 'ws://' + window.location.host + '/ws/chat/' +
+                       username + '-' + friend + '/';
             return url;
         }
 
