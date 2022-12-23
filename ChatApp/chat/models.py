@@ -6,7 +6,10 @@ class ChatMessage(models.Model):
     receiver = models.ForeignKey(User, related_name='receiver', on_delete=models.CASCADE)
     group = models.CharField(max_length=100)
     content = models.TextField()
-    sent_at = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f'ChatMessage of {self.group} - {self.id}'
+
+    def get_10_recent(group):
+        return ChatMessage.objects.filter(group=group).order_by('-timestamp').all()[:10]

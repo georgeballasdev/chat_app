@@ -1,4 +1,5 @@
 import json
+from asgiref.sync import sync_to_async, async_to_sync
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import User
@@ -22,31 +23,44 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, code):
         print('DISCONNECTED', code)
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
-        
+    
+    async def get_messages(self, data):
+        messages = await self.get_recent_messages(self.group_name)
+        recent_messages = await self.messages_to_json(messages)
+        data = {
+            'command': 'get_messages',
+            'messages': recent_messages
+        }
+        await self.send(text_data=json.dumps(data))
 
-    async def receive(self, text_data=None, bytes_data=None):
-        data = json.loads(text_data)
+    @database_sync_to_async
+    def get_recent_messages(self, group):
+        return ChatMessage.get_10_recent(group)
+
+    async def new_message(self, data):
         sender = data['sender']
         receiver = data['receiver']
-        message = data['message']
-        
-        sent_at = await self.save_message_and_return_timestamp(sender, receiver, self.group_name, message)
-
+        content = data['content']
+        message = await self.save_and_get_message(sender, receiver, self.group_name, content)
         await self.channel_layer.group_send(
             self.group_name, {
                 'type': 'chat_message',
                 'message': message,
-                'sender': sender,
-                'sent_at': sent_at
                 }
         )
 
+    commands = {
+        'get_messages': get_messages,
+        'new_message': new_message
+    }
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        await self.commands[data['command']](self, data)
+        
     async def chat_message(self, event):
         message = event['message']
-        sender = event['sender']
-        sent_at = event['sent_at']
-        text_data = json.dumps({'message': message, 'sender': sender, 'sent_at': sent_at})
-        await self.send(text_data=text_data)    
+        await self.send(text_data=json.dumps(message))    
 
     async def get_group_name(self, user, friend):
         if user < friend:
@@ -59,11 +73,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return friend in User.objects.exclude(username=user)
 
     @database_sync_to_async
-    def save_message_and_return_timestamp(self, sender, receiver, group, content):
+    def save_and_get_message(self, sender, receiver, group, content):
         message = ChatMessage.objects.create(
             sender=User.objects.get(username=sender),
             receiver=User.objects.get(username=receiver),
             group=group,
             content=content
         )
-        return json.dumps(message.sent_at, default=str)
+        return self.message_to_json(message)
+
+    @database_sync_to_async
+    def messages_to_json(self, messages):
+        result = []
+        for message in messages:
+            result.append({
+                'sender': message.sender.username,
+                'receiver': message.receiver.username,
+                'content': message.content,
+                'timestamp': str(message.timestamp)})
+        return result
