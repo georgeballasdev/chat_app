@@ -80,7 +80,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             group=group,
             content=content
         )
-        return self.message_to_json(message)
+        return {
+                'sender': message.sender.username,
+                'receiver': message.receiver.username,
+                'content': message.content,
+                'timestamp': str(message.timestamp)}
 
     @database_sync_to_async
     def messages_to_json(self, messages):
