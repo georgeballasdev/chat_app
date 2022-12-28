@@ -82,12 +82,12 @@ body {
 
 #chat2 {
     display: none;
-    right: 39vw;
+    right: 42.4vw;
 }
 
 #chat3 {
     display: none;
-    right: 64vw;
+    right: 70.8vw;
 }
 
 .chat {
@@ -101,6 +101,7 @@ body {
 
 .chat-head {
     background-color: lightskyblue;
+    width: 28.4vw;
     font-size: 32px;
     text-align: center;
     border-radius: 3px;
@@ -144,4 +145,8 @@ body {
 }
 .send-btn img {
     border-radius: 5px;
+}
+
+.collapsed {
+    display: none;
 }
