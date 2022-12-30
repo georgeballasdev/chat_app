@@ -12,4 +12,4 @@ class ChatMessage(models.Model):
         return f'ChatMessage of {self.group} - {self.id}'
 
     def get_10_recent(group):
-        return ChatMessage.objects.filter(group=group).order_by('-timestamp').all()[:10]
+        return ChatMessage.objects.filter(group=group).order_by('-timestamp').all()[:10:-1]
